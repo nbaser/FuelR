@@ -1,0 +1,15 @@
+# Abhängigkeiten
+node_modules
+
+# Build-Ausgabe (wird von GitHub Actions gebaut)
+dist
+dev-dist
+*.tsbuildinfo
+
+# Lokale Umgebungen
+.env
+.env.*
+*.local
+
+# System
+.DS_Store
