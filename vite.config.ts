@@ -5,7 +5,18 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Fester Port: Die lokal gespeicherten Daten hängen am Origin (localhost:4173).
 const PORT = 4173;
 
+// Pfad, unter dem die App ausgeliefert wird. Lokal "/", auf GitHub Pages "/<repo>/"
+// (wird im Workflow über BASE_PATH gesetzt).
+declare const process: { env: Record<string, string | undefined> };
+const BASE = normalizeBase(process.env.BASE_PATH);
+
+function normalizeBase(raw?: string): string {
+  if (!raw || raw === '/') return '/';
+  return `/${raw.replace(/^\/+|\/+$/g, '')}/`;
+}
+
 export default defineConfig({
+  base: BASE,
   plugins: [
     react(),
     VitePWA({
@@ -17,7 +28,9 @@ export default defineConfig({
         description: 'Pre-, Intra- und Post-Fuelling für Rennrad und Laufen',
         lang: 'de',
         display: 'standalone',
-        start_url: '/',
+        id: BASE,
+        start_url: BASE,
+        scope: BASE,
         theme_color: '#0f262e',
         background_color: '#091a20',
         icons: [
@@ -27,7 +40,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
+        navigateFallback: `${BASE}index.html`,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.open-meteo\.com\//,

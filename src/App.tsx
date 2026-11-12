@@ -25,7 +25,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <img src="/favicon.svg" alt="" width={28} height={28} />
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} />
           <span>FuelR</span>
         </div>
         <nav>

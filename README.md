@@ -25,6 +25,23 @@ Nach Code-Änderungen erneut `npm run start` ausführen und die App öffnen. Sie
 npm run dev        # Hot-Reload auf http://localhost:5173 (eigene Daten, getrennt von 4173)
 ```
 
+## Veröffentlichen auf GitHub Pages (Android & Co.)
+
+Branches: Entwickelt wird auf `dev`, veröffentlicht wird `master`. Jeder Push auf `master` baut die App
+über GitHub Actions (`.github/workflows/deploy.yml`) und stellt sie unter `https://<nutzer>.github.io/<repo>/` bereit.
+
+Einmalig:
+
+1. Auf GitHub ein öffentliches Repo anlegen (z. B. `fuelr`) und als `origin` hinzufügen.
+2. Im Repo unter **Settings → Pages → Source** „GitHub Actions“ wählen.
+3. `master` pushen – nach ~1 min ist die App online.
+
+Auf dem Smartphone die Adresse in Chrome öffnen → ⋮ → „App installieren“. Daten liegen danach im Browser
+des Handys (getrennt vom Mac) – übertragen über Profil → Datensicherung.
+
+Der Pfad kommt aus der Umgebungsvariable `BASE_PATH` (im Workflow automatisch der Repo-Name).
+Lokal testen: `BASE_PATH=/fuelr/ npm run build`.
+
 ## Aufbau
 
 - `src/lib/calc.ts`: Berechnung (Energie, KH-Ziel, Flüssigkeit, Natrium, Pre/Intra/Post, Zeitplan)
