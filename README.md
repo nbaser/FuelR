@@ -49,3 +49,10 @@ Lokal testen: `BASE_PATH=/fuelr/ npm run build`.
 - `src/lib/weather.ts`: Standort + Open-Meteo-Prognose für das Zeitfenster der Einheit
 - `src/lib/fit.ts`: FIT-Import (Garmin FIT SDK): Aktivitäten und Strecken
 - `src/components/`: Seiten Planen, Pläne, Produkte, Profil
+
+## Lizenz
+
+[MIT](LICENSE) – gilt für den Code von FuelR. Abhängigkeiten haben eigene Lizenzen, insbesondere das
+Garmin FIT SDK (`@garmin/fitsdk`, siehe dessen `LICENSE.txt`).
+
+Die Empfehlungen sind Orientierungswerte nach gängiger Sporternährungs-Literatur und keine medizinische Beratung.
