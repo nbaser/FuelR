@@ -1,7 +1,9 @@
 # FuelR – Fuelling-Planer
 
 Lokale Web-App (PWA) für Pre-, Intra- und Post-Fuelling beim Rennrad und Laufen.
-Alle Daten bleiben im Browser auf diesem Mac (localStorage). Wetter kommt von Open-Meteo (ohne API-Key).
+Alle Daten bleiben im Browser des jeweiligen Geräts (localStorage). Wetter kommt von Open-Meteo (ohne API-Key).
+
+**Online:** https://nbaser.github.io/FuelR/ – im Browser öffnen und als App installieren (auch auf Android).
 
 ## Starten & als App installieren
 
