@@ -4,10 +4,20 @@ import type { Product, Profile, SavedPlan, SegmentInput, SessionInput, Sport } f
 const PREFIX = 'fuelr.';
 
 export function load<T>(key: string, fallback: T): T {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(PREFIX + key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
+    raw = localStorage.getItem(PREFIX + key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    const normalize = NORMALIZE[key];
+    return (normalize ? normalize(parsed) ?? fallback : parsed) as T;
   } catch {
+    // Unlesbare Daten nicht stillschweigend überschreiben, sondern beiseitelegen
+    try {
+      if (raw && !localStorage.getItem(`${PREFIX}unlesbar.${key}`)) localStorage.setItem(`${PREFIX}unlesbar.${key}`, raw);
+    } catch {
+      /* Speicher blockiert */
+    }
     return fallback;
   }
 }
@@ -45,6 +55,81 @@ export function usePersistent<T>(key: string, fallback: T): [T, (v: T | ((prev: 
   );
 
   return [value, set];
+}
+
+// ---------------------------------------------------------------- Daten über Updates hinweg erhalten
+
+/*
+ * Gespeicherte Daten werden beim Laden mit den aktuellen Standardwerten ergänzt. Kommen in einer neuen
+ * Version Felder hinzu, bleiben Profil und Produkte erhalten, statt durch Standardwerte ersetzt zu werden.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const NORMALIZE: Record<string, (raw: any) => unknown> = {
+  profile: (raw) => (raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...DEFAULT_PROFILE, ...raw } : undefined),
+  products: (raw) =>
+    Array.isArray(raw)
+      ? raw
+          .filter((p) => p && typeof p === 'object' && p.id && p.name)
+          .map((p) => ({ type: 'gel', carbsG: 0, ratio: 'other', sodiumMg: 0, caffeineMg: 0, ...p }))
+      : undefined,
+  plans: (raw) => (Array.isArray(raw) ? raw.filter((p) => p && typeof p === 'object' && p.id && p.session) : undefined),
+};
+
+const DATA_KEYS = ['profile', 'products', 'plans', 'draft'] as const;
+const AUTO_BACKUP_KEY = 'autosicherung';
+
+export interface AutoBackupInfo {
+  savedAt: string;
+  products: number;
+  plans: number;
+  hasProfile: boolean;
+}
+
+/**
+ * Beim ersten Start einer neuen App-Version den bisherigen Stand sichern (lokal im Browser).
+ * Geht bei einem Update etwas schief, lässt er sich im Profil wiederherstellen.
+ */
+export function autoBackupOnUpdate(build: string) {
+  try {
+    if (localStorage.getItem(PREFIX + 'build') === build) return;
+    const hasData = DATA_KEYS.some((k) => localStorage.getItem(PREFIX + k));
+    if (hasData) localStorage.setItem(PREFIX + AUTO_BACKUP_KEY, exportAll());
+    localStorage.setItem(PREFIX + 'build', build);
+  } catch {
+    /* Speicher voll oder blockiert */
+  }
+}
+
+export function autoBackupInfo(): AutoBackupInfo | null {
+  try {
+    const raw = localStorage.getItem(PREFIX + AUTO_BACKUP_KEY);
+    if (!raw) return null;
+    const b = JSON.parse(raw);
+    return {
+      savedAt: b.exportedAt,
+      products: Array.isArray(b.data?.products) ? b.data.products.length : 0,
+      plans: Array.isArray(b.data?.plans) ? b.data.plans.length : 0,
+      hasProfile: !!b.data?.profile,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function restoreAutoBackup() {
+  const raw = localStorage.getItem(PREFIX + AUTO_BACKUP_KEY);
+  if (!raw) throw new Error('Keine automatische Sicherung vorhanden');
+  importAll(raw);
+}
+
+/** true, wenn der Browser die Daten nicht von sich aus löschen darf */
+export async function storagePersisted(): Promise<boolean | null> {
+  try {
+    if (!navigator.storage?.persisted) return null;
+    return (await navigator.storage.persisted()) || (await navigator.storage.persist());
+  } catch {
+    return null;
+  }
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -189,7 +274,7 @@ export function migrateSession(raw: any): SessionInput {
 /** Komplette Datensicherung als JSON */
 export function exportAll(): string {
   const data: Record<string, unknown> = {};
-  for (const k of ['profile', 'products', 'plans', 'draft']) data[k] = load(k, null);
+  for (const k of DATA_KEYS) data[k] = load(k, null);
   return JSON.stringify({ app: 'fuelr', version: 1, exportedAt: new Date().toISOString(), data }, null, 2);
 }
 

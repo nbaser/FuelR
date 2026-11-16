@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { bodyInfo, fmtNum } from '../lib/calc';
-import { DEFAULT_PROFILE, exportAll, importAll, usePersistent } from '../lib/storage';
+import { autoBackupInfo, DEFAULT_PROFILE, exportAll, importAll, restoreAutoBackup, storagePersisted, usePersistent } from '../lib/storage';
 import type { Profile } from '../lib/types';
 import { fmtPace, hrZones, paceZones, parsePace, powerZones, ZONE_NAMES } from '../lib/zones';
 import { Card, Field, Icon, NumField, Segmented, Toggle } from './ui';
@@ -11,6 +11,12 @@ export function ProfilePage() {
   const [paceText, setPaceText] = useState(fmtPace(profile.thresholdPaceSec).replace('–', ''));
   const fileRef = useRef<HTMLInputElement>(null);
   const [backupMsg, setBackupMsg] = useState('');
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [auto, setAuto] = useState(autoBackupInfo);
+  useEffect(() => {
+    storagePersisted().then(setPersisted);
+  }, []);
+  const syncPace = () => setPaceText(fmtPace((JSON.parse(localStorage.getItem('fuelr.profile') || '{}') as Profile).thresholdPaceSec).replace('–', ''));
 
   const hrBike = hrZones(profile, 'bike');
   const hrRun = hrZones(profile, 'run');
@@ -22,7 +28,7 @@ export function ProfilePage() {
     <div className="page">
       <div className="page-intro">
         <h1>Profil</h1>
-        <p>Deine Körper- und Leistungswerte. Alles bleibt lokal auf diesem Mac. Je mehr du angibst, desto genauer wird die Berechnung – Pflicht ist nur das Gewicht.</p>
+        <p>Deine Körper- und Leistungswerte. Alles bleibt lokal auf diesem Gerät. Je mehr du angibst, desto genauer wird die Berechnung – Pflicht ist nur das Gewicht.</p>
       </div>
 
       <div className="grid-2">
@@ -139,7 +145,24 @@ export function ProfilePage() {
       </Card>
 
       <Card title="Datensicherung">
-        <p className="muted">Profil, Produkte und Pläne als Datei sichern oder wiederherstellen.</p>
+        <p className="muted">
+          Profil, Produkte und Pläne bleiben bei App-Updates erhalten. Sie liegen aber nur in diesem Browser – eine Sicherungsdatei schützt vor dem Löschen der Browserdaten und bringt sie
+          auf ein anderes Gerät.
+        </p>
+        {persisted === true && (
+          <div className="note info">
+            {Icon.info}
+            <span>Dauerhafter Speicher aktiv: Der Browser löscht die Daten nicht von sich aus.</span>
+          </div>
+        )}
+        {persisted === false && (
+          <div className="note warn">
+            {Icon.alert}
+            <span>
+              Der Browser garantiert keinen dauerhaften Speicher und kann die Daten bei Platzmangel oder längerer Nichtnutzung löschen. Installiere FuelR als App und sichere regelmäßig.
+            </span>
+          </div>
+        )}
         <div className="row-actions">
           <button
             className="btn"
@@ -168,7 +191,7 @@ export function ProfilePage() {
               try {
                 importAll(await f.text());
                 setBackupMsg('Sicherung wiederhergestellt.');
-                setPaceText(fmtPace((JSON.parse(localStorage.getItem('fuelr.profile') || '{}') as Profile).thresholdPaceSec).replace('–', ''));
+                syncPace();
               } catch (err) {
                 setBackupMsg((err as Error).message);
               }
@@ -177,6 +200,33 @@ export function ProfilePage() {
           />
           {backupMsg && <span className="muted">{backupMsg}</span>}
         </div>
+        {auto && (
+          <div className="auto-backup">
+            <div>
+              <b>Automatische Sicherung</b>
+              <small className="muted">
+                Stand vor dem letzten Update ({new Date(auto.savedAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}): {auto.hasProfile ? 'Profil, ' : ''}
+                {auto.products} {auto.products === 1 ? 'Produkt' : 'Produkte'}, {auto.plans} {auto.plans === 1 ? 'Plan' : 'Pläne'}
+              </small>
+            </div>
+            <button
+              className="btn small ghost"
+              onClick={() => {
+                if (!confirm('Aktuelle Daten durch den Stand vor dem letzten Update ersetzen?')) return;
+                try {
+                  restoreAutoBackup();
+                  syncPace();
+                  setAuto(autoBackupInfo());
+                  setBackupMsg('Stand vor dem letzten Update wiederhergestellt.');
+                } catch (err) {
+                  setBackupMsg((err as Error).message);
+                }
+              }}
+            >
+              {Icon.refresh} Wiederherstellen
+            </button>
+          </div>
+        )}
       </Card>
     </div>
   );

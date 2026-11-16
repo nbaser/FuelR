@@ -17,6 +17,8 @@ function normalizeBase(raw?: string): string {
 
 export default defineConfig({
   base: BASE,
+  // Kennung des Builds: Beim ersten Start einer neuen Version wird der alte Datenstand gesichert.
+  define: { __APP_BUILD__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
     VitePWA({
