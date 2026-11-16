@@ -45,7 +45,7 @@ export function InfoPage() {
         <Card title="Dauer und Intensität" icon={Icon.clock}>
           <ul className="info-list">
             <li>
-              <b>Dauer</b> gibst du direkt ein oder sie ergibt sich aus Distanz und Ø-Tempo. Ohne eigenes Tempo nutzt FuelR einen Vorschlag.
+              <b>Dauer</b> gibst du im Tab „Zeit“ direkt ein (ideal für Indoor) oder sie ergibt sich im Tab „Distanz &amp; Tempo“ aus Distanz und Ø-Tempo. Ohne eigenes Tempo nutzt FuelR einen Vorschlag.
             </li>
             <li>
               <b>Tempo-Vorschlag Rad:</b> aus FTP (oder W/kg-Richtwerten) über Rollwiderstand, Luftwiderstand und Steigung. Die Stirnfläche (CdA) wird aus Größe und Gewicht geschätzt, indoor

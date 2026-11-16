@@ -263,67 +263,106 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
 
 function SegmentCard({ seg, r, profile, brick, onChange }: { seg: SegmentInput; r: SegmentResult; profile: Profile; brick: boolean; onChange: (p: Partial<SegmentInput>) => void }) {
   const bike = seg.sport === 'bike';
-  const title = brick ? (bike ? 'Radteil' : 'Laufteil') : bike ? 'Strecke und Intensität' : 'Strecke und Intensität';
-  const canSpeed = !!seg.distanceKm;
+  const title = brick ? (bike ? 'Radteil' : 'Laufteil') : 'Umfang und Intensität';
+  const byDistance = seg.timeMode === 'speed';
+  const suggestion = bike ? `${fmtNum(r.suggestedSpeedKmh ?? 0, 1)} km/h` : `${fmtPace(r.suggestedPaceSec)} /km`;
+  const suggestionTitle = profile.ftp || profile.thresholdPaceSec ? 'Aus FTP/Schwellenpace, Gewicht, Höhenmetern und Intensität' : 'Grobe Schätzung – mit FTP/Schwellenpace im Profil genauer';
 
   return (
     <Card title={title} icon={bike ? Icon.bike : Icon.run}>
-      <div className="fields">
-        <NumField label="Distanz" unit="km" step={0.1} value={seg.distanceKm} min={0} max={1000} onChange={(v) => onChange({ distanceKm: v })} placeholder="optional" />
-        <NumField label="Höhenmeter" unit="hm" value={seg.elevationM} min={0} max={10000} onChange={(v) => onChange({ elevationM: v ?? 0 })} />
-        <Field label="Zeit planen über" wide>
-          <Segmented<TimeMode>
-            value={canSpeed ? seg.timeMode : 'duration'}
-            onChange={(timeMode) => onChange({ timeMode })}
-            options={[
-              { value: 'duration', label: 'Dauer' },
-              { value: 'speed', label: bike ? 'Ø-Geschwindigkeit' : 'Ø-Pace' },
-            ]}
-          />
-        </Field>
-        {seg.timeMode === 'speed' && canSpeed ? (
-          <>
-            {bike ? (
-              <NumField
-                label="Ø-Geschwindigkeit"
-                unit="km/h"
-                step={0.5}
-                value={seg.speedKmh}
-                min={5}
-                max={60}
-                onChange={(v) => onChange({ speedKmh: v })}
-                placeholder={r.suggestedSpeedKmh ? String(r.suggestedSpeedKmh).replace('.', ',') : ''}
-              />
-            ) : (
-              <Field label="Ø-Pace">
-                <PaceInput value={seg.paceSec} onChange={(paceSec) => onChange({ paceSec })} placeholder={r.suggestedPaceSec ? fmtPace(r.suggestedPaceSec) : 'm:ss'} />
-              </Field>
-            )}
-            <Field label="Ergibt">
-              <div className="derived">
-                <b>{fmtDuration(r.durationMin)}</b>
-                <button
-                  type="button"
-                  className="link"
-                  onClick={() => (bike ? onChange({ speedKmh: r.suggestedSpeedKmh }) : onChange({ paceSec: r.suggestedPaceSec }))}
-                  title={profile.ftp || profile.thresholdPaceSec ? 'Aus FTP/Schwellenpace, Gewicht, Höhenmetern und Intensität' : 'Grobe Schätzung – mit FTP/Schwellenpace im Profil genauer'}
-                >
-                  Vorschlag: {bike ? `${fmtNum(r.suggestedSpeedKmh ?? 0, 1)} km/h` : `${fmtPace(r.suggestedPaceSec)} /km`}
-                </button>
-              </div>
-            </Field>
-          </>
-        ) : (
-          <Field label="Dauer" hint={r.speedLabel}>
-            <div className="duo">
-              <NumInput value={Math.floor(seg.durationMin / 60)} unit="h" min={0} max={24} onChange={(v) => onChange({ durationMin: (v ?? 0) * 60 + (seg.durationMin % 60) })} />
-              <NumInput value={seg.durationMin % 60} unit="min" min={0} max={59} onChange={(v) => onChange({ durationMin: Math.floor(seg.durationMin / 60) * 60 + Math.min(59, v ?? 0) })} />
-            </div>
-          </Field>
-        )}
-      </div>
       <div className="toggles">
-        <Toggle checked={seg.indoor} onChange={(indoor) => onChange({ indoor })} label={bike ? 'Indoor (Rolle / Smart-Trainer)' : 'Indoor (Laufband)'} />
+        <Toggle
+          checked={seg.indoor}
+          onChange={(indoor) => onChange(indoor ? { indoor, timeMode: 'duration' } : { indoor })}
+          label={bike ? 'Indoor (Rolle / Smart-Trainer)' : 'Indoor (Laufband)'}
+          hint={seg.indoor ? 'Indoor planst du am besten über die Zeit.' : undefined}
+        />
+      </div>
+
+      <div className="mode-tabs">
+        <Segmented<TimeMode>
+          value={seg.timeMode}
+          onChange={(timeMode) => onChange({ timeMode })}
+          options={[
+            { value: 'duration', label: <>{Icon.clock} Zeit</> },
+            { value: 'speed', label: <>{Icon.pin} Distanz &amp; Tempo</> },
+          ]}
+        />
+        <div className="mode-panel">
+          {byDistance ? (
+            <>
+              <p className="mode-hint">Die Dauer ergibt sich aus Distanz und {bike ? 'Ø-Geschwindigkeit' : 'Ø-Pace'}. Ohne eigenes Tempo nimmt FuelR den Vorschlag.</p>
+              <div className="fields">
+                <NumField label="Distanz" unit="km" step={0.1} value={seg.distanceKm} min={0} max={1000} onChange={(v) => onChange({ distanceKm: v })} />
+                <NumField label="Höhenmeter" unit="hm" value={seg.elevationM} min={0} max={10000} onChange={(v) => onChange({ elevationM: v ?? 0 })} />
+                {bike ? (
+                  <NumField
+                    label="Ø-Geschwindigkeit"
+                    unit="km/h"
+                    step={0.5}
+                    value={seg.speedKmh}
+                    min={5}
+                    max={60}
+                    onChange={(v) => onChange({ speedKmh: v })}
+                    placeholder={r.suggestedSpeedKmh ? String(r.suggestedSpeedKmh).replace('.', ',') : ''}
+                  />
+                ) : (
+                  <Field label="Ø-Pace">
+                    <PaceInput value={seg.paceSec} onChange={(paceSec) => onChange({ paceSec })} placeholder={r.suggestedPaceSec ? fmtPace(r.suggestedPaceSec) : 'm:ss'} />
+                  </Field>
+                )}
+                <Field label="Ergibt Dauer">
+                  <div className="derived">
+                    {seg.distanceKm ? <b>{fmtDuration(r.durationMin)}</b> : <span className="muted">Distanz fehlt</span>}
+                    <button
+                      type="button"
+                      className="link"
+                      onClick={() => (bike ? onChange({ speedKmh: r.suggestedSpeedKmh }) : onChange({ paceSec: r.suggestedPaceSec }))}
+                      title={suggestionTitle}
+                    >
+                      Vorschlag: {suggestion}
+                    </button>
+                  </div>
+                </Field>
+              </div>
+              {!seg.distanceKm && (
+                <div className="note warn">
+                  {Icon.alert}
+                  <span>Distanz eingeben, damit die Dauer berechnet werden kann. Bis dahin rechnet FuelR mit {fmtDuration(r.durationMin)} aus dem Tab „Zeit“.</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="mode-hint">{seg.indoor ? 'Gib die geplante Trainingszeit ein.' : 'Gib die geplante Dauer ein – ideal, wenn du die Strecke nicht genau kennst.'}</p>
+              <div className="fields">
+                <Field label="Dauer" wide>
+                  <div className="duo duo-time">
+                    <NumInput value={Math.floor(seg.durationMin / 60)} unit="h" min={0} max={24} onChange={(v) => onChange({ durationMin: (v ?? 0) * 60 + (seg.durationMin % 60) })} />
+                    <NumInput value={seg.durationMin % 60} unit="min" min={0} max={59} onChange={(v) => onChange({ durationMin: Math.floor(seg.durationMin / 60) * 60 + Math.min(59, v ?? 0) })} />
+                  </div>
+                </Field>
+              </div>
+              <div className="mode-optional">
+                <span className="mode-optional-label">Optional</span>
+                <div className="fields">
+                  <NumField
+                    label="Distanz"
+                    unit="km"
+                    step={0.1}
+                    value={seg.distanceKm}
+                    min={0}
+                    max={1000}
+                    onChange={(v) => onChange({ distanceKm: v })}
+                    placeholder="–"
+                    hint={r.speedLabel || 'Zeigt dein Ø-Tempo und verfeinert die Energie'}
+                  />
+                  {!!seg.distanceKm && <NumField label="Höhenmeter" unit="hm" value={seg.elevationM} min={0} max={10000} onChange={(v) => onChange({ elevationM: v ?? 0 })} />}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="fields">
