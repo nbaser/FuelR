@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { fmtPace, parsePace } from '../lib/zones';
 
 export function Card({ title, icon, children, actions, className = '' }: { title?: ReactNode; icon?: ReactNode; children: ReactNode; actions?: ReactNode; className?: string }) {
@@ -48,7 +48,10 @@ export function NumInput({
   placeholder?: string;
 }) {
   const [text, setText] = useState(fmt(value));
+  const editing = useRef(false);
   useEffect(() => {
+    // Beim Tippen darf das Feld leer bleiben, auch wenn die App intern schon einen Standardwert einsetzt
+    if (editing.current && text.trim() === '') return;
     const parsed = Number(text.replace(',', '.'));
     if (text === '' ? value != null : parsed !== value) setText(fmt(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,8 +70,12 @@ export function NumInput({
           const n = Number(t.replace(',', '.'));
           if (isFinite(n)) onChange(n);
         }}
+        onFocus={() => {
+          editing.current = true;
+        }}
         onBlur={() => {
-          if (value == null) return;
+          editing.current = false;
+          if (value == null) return setText('');
           let v = value;
           if (min != null) v = Math.max(min, v);
           if (max != null) v = Math.min(max, v);
