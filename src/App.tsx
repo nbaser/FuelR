@@ -1,16 +1,18 @@
 import { useState } from 'react';
+import { InfoPage } from './components/InfoPage';
 import { PlanPage } from './components/PlanPage';
 import { PlansPage } from './components/PlansPage';
 import { ProductsPage } from './components/ProductsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { load, save } from './lib/storage';
 
-type Page = 'plan' | 'plans' | 'products' | 'profile';
+type Page = 'plan' | 'plans' | 'products' | 'profile' | 'info';
 const NAV: { id: Page; label: string }[] = [
   { id: 'plan', label: 'Planen' },
   { id: 'plans', label: 'Pläne' },
   { id: 'products', label: 'Produkte' },
   { id: 'profile', label: 'Profil' },
+  { id: 'info', label: 'Info' },
 ];
 
 export default function App() {
@@ -41,6 +43,7 @@ export default function App() {
         {page === 'plans' && <PlansPage onOpen={() => setPage('plan')} />}
         {page === 'products' && <ProductsPage />}
         {page === 'profile' && <ProfilePage />}
+        {page === 'info' && <InfoPage />}
       </main>
     </div>
   );

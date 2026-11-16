@@ -1459,3 +1459,68 @@ tr.ev-refill td {
 .ev-dot.drink {
   background: var(--bermuda);
 }
+
+/* ---------- Info-Seite */
+.info-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.5;
+}
+.info-list b {
+  color: var(--text);
+}
+.info-safety {
+  border-color: color-mix(in srgb, var(--froly) 45%, var(--border));
+}
+.info-safety .card-icon {
+  color: var(--alert-ink);
+}
+.info-zones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.info-zones span {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.info-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .info-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.info-table th,
+.info-table td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.info-table th {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.info-table td:last-child {
+  color: var(--corvette);
+}
