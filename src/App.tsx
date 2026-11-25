@@ -5,6 +5,7 @@ import { PlansPage } from './components/PlansPage';
 import { ProductsPage } from './components/ProductsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { load, save } from './lib/storage';
+import { APP_VERSION } from './lib/version';
 
 type Page = 'plan' | 'plans' | 'products' | 'profile' | 'info';
 const NAV: { id: Page; label: string }[] = [
@@ -45,6 +46,7 @@ export default function App() {
         {page === 'profile' && <ProfilePage />}
         {page === 'info' && <InfoPage />}
       </main>
+      <footer className="app-footer">v{APP_VERSION}</footer>
     </div>
   );
 }

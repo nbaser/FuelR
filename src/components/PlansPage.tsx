@@ -6,6 +6,7 @@ import { Card, Icon } from './ui';
 export function PlansPage({ onOpen }: { onOpen: () => void }) {
   const [plans, setPlans] = usePersistent<SavedPlan[]>('plans', []);
   const [, setDraft] = usePersistent<SessionInput>('draft', defaultSession());
+  const [, setLocked] = usePersistent<boolean>('draftLocked', false);
 
   return (
     <div className="page">
@@ -45,6 +46,7 @@ export function PlansPage({ onOpen }: { onOpen: () => void }) {
                       className="btn small"
                       onClick={() => {
                         setDraft(s);
+                        setLocked(true);
                         onOpen();
                       }}
                     >

@@ -18,6 +18,15 @@ export function Card({ title, icon, children, actions, className = '' }: { title
   );
 }
 
+/** Unsichtbarer Rahmen, um einen Abschnitt per natives <fieldset disabled> komplett zu sperren (grau + inaktiv) */
+export function Fieldset({ disabled, children, className = '' }: { disabled?: boolean; children: ReactNode; className?: string }) {
+  return (
+    <fieldset disabled={disabled} className={`bare-fieldset ${className}`}>
+      {children}
+    </fieldset>
+  );
+}
+
 export function Field({ label, hint, children, wide }: { label: ReactNode; hint?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
     <label className={`field ${wide ? 'wide' : ''}`}>

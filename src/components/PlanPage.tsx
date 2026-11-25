@@ -7,7 +7,7 @@ import { forecastCovers, summarize, useForecast, weatherText } from '../lib/weat
 import { fmtPace, ZONE_NAMES } from '../lib/zones';
 import { PlanResultView } from './PlanResult';
 import { TYPE_LABEL } from './ProductsPage';
-import { Card, Field, Icon, NumField, NumInput, PaceInput, Segmented, Stepper, Toggle } from './ui';
+import { Card, Field, Fieldset, Icon, NumField, NumInput, PaceInput, Segmented, Stepper, Toggle } from './ui';
 
 type SegKey = 'bike' | 'run';
 
@@ -18,6 +18,7 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
   const s = useMemo(() => migrateSession(rawDraft), [rawDraft]);
   const setS = (fn: (x: SessionInput) => SessionInput) => setRawDraft((x) => fn(migrateSession(x)));
   const [, setPlans] = usePersistent<SavedPlan[]>('plans', []);
+  const [locked, setLocked] = usePersistent<boolean>('draftLocked', false);
   const wx = useForecast();
   const [fitInfo, setFitInfo] = useState<FitSummary | null>(null);
   const [fitError, setFitError] = useState('');
@@ -42,6 +43,7 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
       const f = await parseFit(file, profile);
       setFitInfo(f);
       setS((x) => applyFit(x, f));
+      setLocked(true);
     } catch (e) {
       setFitError((e as Error).message);
       setFitInfo(null);
@@ -57,6 +59,12 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
           <button className="btn small" onClick={() => onGoto('profile')}>
             Zum Profil
           </button>
+        </div>
+      )}
+      {locked && (
+        <div className="banner">
+          {Icon.info}
+          <span>Werte aus einer FIT-Datei oder einem gespeicherten Plan übernommen – Eingabefelder sind gesperrt, bis du auf „Neu beginnen“ klickst.</span>
         </div>
       )}
 
@@ -86,6 +94,7 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
           >
             {fitError && <div className="note warn">{fitError}</div>}
             {fitInfo && <FitInfo f={fitInfo} onClose={() => setFitInfo(null)} />}
+            <Fieldset disabled={locked}>
             <div className="fields">
               <Field label="Titel" wide>
                 <input value={s.title} placeholder="z. B. Lange Ausfahrt Taunus" onChange={(e) => set({ title: e.target.value })} />
@@ -144,10 +153,11 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
               <Toggle checked={s.caffeine} onChange={(caffeine) => set({ caffeine })} label="Koffein nutzen" />
               <Toggle checked={s.nextSessionWithin24h} onChange={(nextSessionWithin24h) => set({ nextSessionWithin24h })} label="Nächste Einheit innerhalb von 24 h" hint="Schnellere Glykogen-Auffüllung" />
             </div>
+            </Fieldset>
           </Card>
 
           {segKeys.map((k) => (
-            <SegmentCard key={k} seg={s[k]} r={segResult(k)} profile={profile} brick={s.type === 'brick'} onChange={(patch) => setSeg(k, patch)} />
+            <SegmentCard key={k} seg={s[k]} r={segResult(k)} profile={profile} brick={s.type === 'brick'} locked={locked} onChange={(patch) => setSeg(k, patch)} />
           ))}
 
           <Card
@@ -155,12 +165,13 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
             icon={Icon.sun}
             actions={
               !allIndoor && (
-                <button className="btn small ghost" onClick={wx.refresh} disabled={wx.status === 'loading'}>
+                <button className="btn small ghost" onClick={wx.refresh} disabled={wx.status === 'loading' || locked}>
                   {Icon.refresh} {wx.status === 'loading' ? 'Lädt …' : 'Aktualisieren'}
                 </button>
               )
             }
           >
+            <Fieldset disabled={locked || allIndoor}>
             {allIndoor ? (
               <div className="fields">
                 <NumField label="Raumtemperatur" unit="°C" value={s.manualTempC} min={-10} max={45} onChange={(v) => set({ manualTempC: v ?? 20 })} />
@@ -215,10 +226,11 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
                 )}
               </>
             )}
+            </Fieldset>
           </Card>
 
           {segKeys.map((k) => (
-            <FuelCard key={k} seg={s[k]} r={segResult(k)} products={products} brick={s.type === 'brick'} onChange={(patch) => setSeg(k, patch)} onManage={() => onGoto('products')} />
+            <FuelCard key={k} seg={s[k]} r={segResult(k)} products={products} brick={s.type === 'brick'} locked={locked} onChange={(patch) => setSeg(k, patch)} onManage={() => onGoto('products')} />
           ))}
 
           <div className="row-actions">
@@ -243,6 +255,7 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
                 d.run.feedIds = feeds.filter((f) => f.type === 'gel').slice(0, 1).map((f) => f.id);
                 setRawDraft(d);
                 setFitInfo(null);
+                setLocked(false);
               }}
             >
               Neu beginnen
@@ -261,7 +274,21 @@ export function PlanPage({ onGoto }: { onGoto: (page: 'profile' | 'products') =>
 
 // ---------------------------------------------------------------- Segment: Strecke, Zeit, Intensität
 
-function SegmentCard({ seg, r, profile, brick, onChange }: { seg: SegmentInput; r: SegmentResult; profile: Profile; brick: boolean; onChange: (p: Partial<SegmentInput>) => void }) {
+function SegmentCard({
+  seg,
+  r,
+  profile,
+  brick,
+  locked,
+  onChange,
+}: {
+  seg: SegmentInput;
+  r: SegmentResult;
+  profile: Profile;
+  brick: boolean;
+  locked: boolean;
+  onChange: (p: Partial<SegmentInput>) => void;
+}) {
   const bike = seg.sport === 'bike';
   const title = brick ? (bike ? 'Radteil' : 'Laufteil') : 'Umfang und Intensität';
   const byDistance = seg.timeMode === 'speed';
@@ -270,6 +297,7 @@ function SegmentCard({ seg, r, profile, brick, onChange }: { seg: SegmentInput; 
 
   return (
     <Card title={title} icon={bike ? Icon.bike : Icon.run}>
+      <Fieldset disabled={locked}>
       <div className="toggles">
         <Toggle
           checked={seg.indoor}
@@ -338,8 +366,27 @@ function SegmentCard({ seg, r, profile, brick, onChange }: { seg: SegmentInput; 
               <div className="fields">
                 <Field label="Dauer" wide>
                   <div className="duo duo-time">
-                    <NumInput value={Math.floor(seg.durationMin / 60)} unit="h" min={0} max={24} onChange={(v) => onChange({ durationMin: (v ?? 0) * 60 + (seg.durationMin % 60) })} />
-                    <NumInput value={seg.durationMin % 60} unit="min" min={0} max={59} onChange={(v) => onChange({ durationMin: Math.floor(seg.durationMin / 60) * 60 + Math.min(59, v ?? 0) })} />
+                    <NumInput
+                      value={Math.floor(seg.durationMin / 60)}
+                      unit="h"
+                      min={0}
+                      max={24}
+                      onChange={(v) => {
+                        // Beim Leeren zum Neueingeben darf die Dauer nicht zwischenzeitlich auf (fast) 0 springen
+                        if (v == null) return;
+                        onChange({ durationMin: v * 60 + (seg.durationMin % 60) });
+                      }}
+                    />
+                    <NumInput
+                      value={seg.durationMin % 60}
+                      unit="min"
+                      min={0}
+                      max={59}
+                      onChange={(v) => {
+                        if (v == null) return;
+                        onChange({ durationMin: Math.floor(seg.durationMin / 60) * 60 + Math.min(59, v) });
+                      }}
+                    />
                   </div>
                 </Field>
               </div>
@@ -400,6 +447,7 @@ function SegmentCard({ seg, r, profile, brick, onChange }: { seg: SegmentInput; 
           <NumField label="Ø Herzfrequenz" unit="bpm" value={seg.targetHr} min={80} max={210} onChange={(v) => onChange({ targetHr: v })} />
         </div>
       )}
+      </Fieldset>
     </Card>
   );
 }
@@ -455,6 +503,7 @@ function FuelCard({
   r,
   products,
   brick,
+  locked,
   onChange,
   onManage,
 }: {
@@ -462,6 +511,7 @@ function FuelCard({
   r: SegmentResult;
   products: Product[];
   brick: boolean;
+  locked: boolean;
   onChange: (p: Partial<SegmentInput>) => void;
   onManage: () => void;
 }) {
@@ -500,6 +550,7 @@ function FuelCard({
         </button>
       }
     >
+      <Fieldset disabled={locked}>
       <div className="fields">
         <Field label="Iso-Drink" wide>
           <select value={seg.drinkId ?? ''} onChange={(e) => onChange({ drinkId: e.target.value || undefined, isoBottles: e.target.value && seg.isoBottles === 0 ? 1 : seg.isoBottles })}>
@@ -567,6 +618,7 @@ function FuelCard({
           </div>
         </div>
       )}
+      </Fieldset>
     </Card>
   );
 }
